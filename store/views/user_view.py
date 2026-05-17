@@ -20,7 +20,7 @@ def user_create(request):
         Cart.objects.create(user=user)
         Bank.objects.create(
             user=user,
-            balance=0
+            balance=1000000
         )
         return Response({
             'message': 'User created successfully'
