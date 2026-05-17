@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from store.models import *
 from store.views import bank_view
 from django.db import transaction
+from store.tasks import generate_invoice_task
 
 from store.serializers import (
     ProductOrderSerializer,
@@ -49,6 +50,8 @@ def order_change_status(request, order_id):
 
         order.status = new_status
         order.save()
+        if(new_status=='success'):
+         generate_invoice_task.delay(order.id)
 
         return Response({'message': 'Status updated'})
 
