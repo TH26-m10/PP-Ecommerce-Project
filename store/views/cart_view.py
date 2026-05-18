@@ -8,6 +8,7 @@ from store.serializers import (
     CartProductSerializer,
 )
 
+
 @api_view(['GET'])
 def cart_show(request, user_id):
 
@@ -42,7 +43,7 @@ def cart_show(request, user_id):
             'success': False,
             'error': str(e)
         })
-    
+
 
 @api_view(['GET'])
 def cart_show(request, user_id):
@@ -72,7 +73,6 @@ def cart_empty(request, user_id):
     })
 
 
-
 @api_view(['POST'])
 @transaction.atomic
 def cart_confirm_payment(request, user_id):
@@ -80,7 +80,6 @@ def cart_confirm_payment(request, user_id):
     try:
         user = User.objects.get(id=user_id)
         cart = Cart.objects.get(user=user)
-        bank = Bank.objects.get(user=user)
         cart_products = CartProduct.objects.filter(cart=cart)
 
         if not cart_products.exists():
@@ -95,8 +94,6 @@ def cart_confirm_payment(request, user_id):
                 return Response({'message': f'{item.product.name} out of stock'})
 
             total_price += item.product.price * item.quantity
-
-     
 
         # create order
         order = Order.objects.create(
@@ -113,7 +110,7 @@ def cart_confirm_payment(request, user_id):
                 price=item.product.price
             )
 
-        # reduce stock  
+        # reduce stock
         item.product.quantity -= item.quantity
         item.product.save()
 
