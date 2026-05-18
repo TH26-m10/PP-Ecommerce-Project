@@ -6,11 +6,6 @@ from store.models import *
 from store.serializers import CartProductSerializer
 from store.services.inventory import checkout_cart_safely
 
-from store.views import bank_view
-from store.serializers import (
-    CartProductSerializer,
-)
-
 
 @api_view(['GET'])
 def cart_show(request, user_id):
@@ -51,68 +46,48 @@ def cart_show(request, user_id):
 
 
 @api_view(['GET'])
-def cart_show(request, user_id):
-
-    user = User.objects.get(id=user_id)
-    cart = Cart.objects.get(user=user)
-
-    products = CartProduct.objects.filter(cart=cart)
-    serializer = CartProductSerializer(
-        products,
-        many=True
-    )
-    return Response({
-        'order_id': cart.id,
-        'products': serializer.data
-    })
-       })
-
-
-@ api_view(['GET'])
-            def cart_empty(request, user_id):
+def cart_empty(request, user_id):
 
     try:
-        user= User.objects.get(id=user_id)
-        cart= Cart.objects.get(user=user)
+        user = User.objects.get(id=user_id)
+        cart = Cart.objects.get(user=user)
 
         CartProduct.objects.filter(cart=cart).delete()
 
         return Response({
-           'message': 'Cart emptied'
+            'message': 'Cart emptied'
         })
 
-        except Exception as e:
+    except Exception as e:
         return Response({
-           'error': str(e)
-        }, status =500)
+            'error': str(e)
+        }, status=500)
 
 
-@ api_view(['POST'])
-        def cart_confirm_payment(request, user_id):
+@api_view(['POST'])
+def cart_confirm_payment(request, user_id):
 
-        try:
-        user= User.objects.get(id=user_id)
+    try:
+        user = User.objects.get(id=user_id)
 
-        order, error= checkout_cart_safely(user)
+        order, error = checkout_cart_safely(user)
 
         if error:
-        return Response({
-               'message': error
-            }, status =400)
-
             return Response({
+                'message': error
+            }, status=400)
+
+        return Response({
             'message': 'Payment successful',
             'order_id': order.id
         })
 
-        except User.DoesNotExist:
+    except User.DoesNotExist:
         return Response({
-           'message': 'User not found'
-        }, status =404)
+            'message': 'User not found'
+        }, status=404)
 
-        except Exception as e:
+    except Exception as e:
         return Response({
-           'error': str(e)
-        })
-
-        }, status =500)
+            'error': str(e)
+        }, status=500)
