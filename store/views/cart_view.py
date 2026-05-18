@@ -96,7 +96,10 @@ def cart_confirm_payment(request, user_id):
 
             total_price += item.product.price * item.quantity
 
-     
+        # bank payment
+        status = bank_view.bank_pay(bank.id,total_price)
+        if not status:
+            return Response({'message': 'Somthing went wrong'})
 
         # create order
         order = Order.objects.create(

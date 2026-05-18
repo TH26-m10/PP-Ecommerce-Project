@@ -50,8 +50,8 @@ def order_change_status(request, order_id):
 
         order.status = new_status
         order.save()
-        if(new_status=='success'):
-         generate_invoice_task.delay(order.id)
+       # if(new_status=='success'):
+       #  generate_invoice_task.delay(order.id)
 
         return Response({'message': 'Status updated'})
 

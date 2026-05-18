@@ -8,7 +8,7 @@ from decimal import Decimal
 def bank_pay(bank_id,amount):
 
     
-    payment_success = random.randint(1, 10) <= 8
+    payment_success = random.randint(1, 10) <= 9
 
     if not payment_success:
         return False
