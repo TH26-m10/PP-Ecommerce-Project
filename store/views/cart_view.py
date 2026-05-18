@@ -1,13 +1,11 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.contrib.auth.models import User
+
 from store.models import *
-from django.db import transaction
+from store.serializers import CartProductSerializer
 from store.services.inventory import checkout_cart_safely
 
-from store.views import bank_view
-from store.serializers import (
-    CartProductSerializer,
-)
 
 @api_view(['GET'])
 def cart_show(request, user_id):
@@ -15,6 +13,7 @@ def cart_show(request, user_id):
     try:
         user = User.objects.get(id=user_id)
         cart = Cart.objects.get(user=user)
+
         cart_products = CartProduct.objects.filter(cart=cart)
 
         total_price = 0
@@ -23,6 +22,7 @@ def cart_show(request, user_id):
         for item in cart_products:
             item_total = item.product.price * item.quantity
             total_price += item_total
+
             data.append({
                 'cart_product_id': item.id,
                 'product_id': item.product.id,
@@ -43,45 +43,39 @@ def cart_show(request, user_id):
             'success': False,
             'error': str(e)
         })
-    
-
-@api_view(['GET'])
-def cart_show(request, user_id):
-
-    user = User.objects.get(id=user_id)
-    cart = Cart.objects.get(user=user)
-
-    products = CartProduct.objects.filter(cart=cart)
-    serializer = CartProductSerializer(
-        products,
-        many=True
-    )
-    return Response({
-        'order_id': cart.id,
-        'products': serializer.data
-    })
 
 
 @api_view(['GET'])
 def cart_empty(request, user_id):
-    user = User.objects.get(id=user_id)
-    cart = Cart.objects.get(user=user)
-    CartProduct.objects.filter(cart=cart).delete()
 
-    return Response({
-        'message': 'Cart emptied'
-    })
+    try:
+        user = User.objects.get(id=user_id)
+        cart = Cart.objects.get(user=user)
 
+        CartProduct.objects.filter(cart=cart).delete()
+
+        return Response({
+            'message': 'Cart emptied'
+        })
+
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=500)
 
 
 @api_view(['POST'])
 def cart_confirm_payment(request, user_id):
+
     try:
         user = User.objects.get(id=user_id)
+
         order, error = checkout_cart_safely(user)
 
         if error:
-            return Response({'message': error}, status=400)
+            return Response({
+                'message': error
+            }, status=400)
 
         return Response({
             'message': 'Payment successful',
@@ -89,6 +83,11 @@ def cart_confirm_payment(request, user_id):
         })
 
     except User.DoesNotExist:
-        return Response({'message': 'User not found'}, status=404)
+        return Response({
+            'message': 'User not found'
+        }, status=404)
+
     except Exception as e:
-        return Response({'error': str(e)}, status=500)
+        return Response({
+            'error': str(e)
+        }, status=500)
