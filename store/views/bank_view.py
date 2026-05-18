@@ -1,13 +1,13 @@
 from decimal import Decimal
-
+from store.tasks import simulate_payment_task
 from store.models import Bank
-
+import time
 import random
 from decimal import Decimal
 
 def bank_pay(bank_id,amount):
 
-    
+    time.sleep(2)  
     payment_success = random.randint(1, 10) <= 9
 
     if not payment_success:
@@ -21,7 +21,7 @@ def bank_pay(bank_id,amount):
 
         bank.balance -= Decimal(str(amount))
         bank.save()
-
+        simulate_payment_task.delay()
         return True
 
     except Bank.DoesNotExist:

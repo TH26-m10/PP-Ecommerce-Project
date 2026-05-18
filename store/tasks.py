@@ -107,7 +107,8 @@ def run_fixed_sales_job(self):
 
         total_sales = 0
         total_orders_processed = 0
-
+        start_time = time.time()
+        
         while current_id <= max_id:
 
             next_id = current_id + chunk_size
@@ -128,10 +129,15 @@ def run_fixed_sales_job(self):
             total_sales += chunk_sum
             total_orders_processed += chunk_count
 
-            print(
-                f"Processed chunk "
-                f"{current_id} -> {next_id}"
-            )
+            execution_time = time.time() - start_time
+
+            print("=" * 40)
+
+            print(f"Execution time: {execution_time:.4f} sec")
+
+            print(f"Orders processed: {chunk_count}")
+
+            print("=" * 60)
 
             current_id = next_id
 
@@ -151,6 +157,13 @@ def run_fixed_sales_job(self):
     except Exception as exc:
 
         raise self.retry(exc=exc)
+
+@shared_task
+def simulate_payment_task():
+
+    print("⏳ Simulating payment...")
+    time.sleep(5)
+
 
 @shared_task(
     bind=True,
