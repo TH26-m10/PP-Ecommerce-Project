@@ -36,10 +36,10 @@ def checkout_cart_safely(user):
     for product_id, qty in required.items():
         product = product_map.get(product_id)
         if not product:
-            return None, 'Product not found'
+            return None, 'Product not found',None
 
         if product.quantity < qty:
-            return None, f'{product.name} out of stock'
+            return None, f'{product.name} out of stock',None
 
     total_amount = sum(
         item.product.price * item.quantity for item in items
@@ -47,13 +47,13 @@ def checkout_cart_safely(user):
 
     bank = Bank.objects.select_for_update().filter(user=user).first()
     if not bank:
-        return None, 'Bank account not found'
+        return None, 'Bank account not found',None
 
     if bank.balance < Decimal(str(total_amount)):
         return None, 'Insufficient balance'
 
     if not bank_pay(bank.id, total_amount):
-        return None, 'Payment failed'
+        return None, 'Payment failed',None
 
     order = Order.objects.create(
         user=user,
@@ -74,4 +74,4 @@ def checkout_cart_safely(user):
 
     CartProduct.objects.filter(cart=cart).delete()
 
-    return order, None
+    return order, None,items

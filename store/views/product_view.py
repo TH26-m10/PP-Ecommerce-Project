@@ -3,12 +3,17 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.db import transaction
 from django.db.models import F
-
+from django.core.cache import cache
 from store.serializers import (
     ProductSerializer,
 )
-
+from django.db.models import Sum
 from store.models import Product
+
+
+PRODUCT_CACHE_PREFIX = "product"
+CHCHE_TIMEOUT_TO_LIVE=30
+BEST_SELLERS_CACHE_KEY = "best_sellers"
 
 
 @api_view(['POST'])
@@ -26,25 +31,6 @@ def product_create(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@transaction.atomic
-def product_update(request, product_id):
-
-    try:
-        product = Product.objects.select_for_update().get(id=product_id)
-    except Product.DoesNotExist:
-        return Response({'error': 'Product not found'}, status=404)
-
-    serializer = ProductSerializer(product, data=request.data, partial=True)
-
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=400)
-
-    serializer.save()
-    return Response(serializer.data)
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
 def product_delete(request, product_id):
 
     try:
@@ -53,7 +39,7 @@ def product_delete(request, product_id):
         return Response({'error': 'Product not found'}, status=404)
 
     product.delete()
-
+    cache.delete(f"product:{product_id}")
     return Response({'message': 'Product deleted'})
 
 
@@ -68,13 +54,32 @@ def product_show(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def product_show_one(request, product_id):
+
+    cache_key = f"{PRODUCT_CACHE_PREFIX}:{product_id}"
+
+    cached_product = cache.get(cache_key)
+
+    # ===== CACHE HIT =====
+    if cached_product is not None:
+        print(f"CACHE HIT -> {cache_key}")
+        return Response(cached_product)
+
+    # ===== CACHE MISS =====
+    print(f"CACHE MISS -> {cache_key}")
+
     try:
         product = Product.objects.get(id=product_id)
-
     except Product.DoesNotExist:
         return Response({'error': 'Product not found'}, status=404)
 
     serializer = ProductSerializer(product)
+
+    cache.set(
+        cache_key,
+        serializer.data,
+        timeout=None
+    )
+
     return Response(serializer.data)
 
 
@@ -106,7 +111,7 @@ def product_add_quantity(request, product_id):
 
     product.quantity = F('quantity') + quantity
     product.save(update_fields=['quantity'])
-
+    cache.delete(f"product:{product_id}")
     product.refresh_from_db()
 
     serializer = ProductSerializer(product)
@@ -115,3 +120,54 @@ def product_add_quantity(request, product_id):
         'success': True,
         'data': serializer.data
     })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def best_sellers(request):
+    # ===== CACHE HIT =====
+    cached_data = cache.get(BEST_SELLERS_CACHE_KEY)
+
+    if cached_data is not None:
+        print("CACHE HIT -> best_sellers")
+        return Response(cached_data)
+
+    # ===== CACHE MISS =====
+    print("CACHE MISS -> best_sellers")
+
+    products = (
+        Product.objects
+        .annotate(total_sold=Sum('productorder__quantity'))
+        .order_by('-total_sold')[:5]
+    )
+
+    serializer = ProductSerializer(products, many=True)
+
+    cache.set(
+        BEST_SELLERS_CACHE_KEY,
+        serializer.data,
+        timeout=CHCHE_TIMEOUT_TO_LIVE
+    )
+
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@transaction.atomic
+def product_update(request, product_id):
+
+    try:
+        product = Product.objects.select_for_update().get(id=product_id)
+    except Product.DoesNotExist:
+        return Response({'error': 'Product not found'}, status=404)
+
+    serializer = ProductSerializer(product, data=request.data, partial=True)
+
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=400)
+
+    serializer.save()
+    cache.delete(f"product:{product_id}")
+
+    return Response(serializer.data)
