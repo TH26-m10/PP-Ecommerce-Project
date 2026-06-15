@@ -4,6 +4,11 @@ import os
 import sys
 
 
+def _allow_local_mariadb():
+    from project.db_compat import allow_local_mariadb
+    allow_local_mariadb()
+
+
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.settings')
@@ -15,6 +20,7 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
+    _allow_local_mariadb()
     execute_from_command_line(sys.argv)
 
 

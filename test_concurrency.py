@@ -1,18 +1,41 @@
 import threading
 import requests
 
-URL_A = "http://127.0.0.1:8000/api/cart/confirm/1"
-URL_B = "http://127.0.0.1:8000/api/cart/confirm/2"
+BASE_URL = "http://127.0.0.1:8000/api"
 
-def buy(url, user_name):
-    response = requests.post(url)
+
+def login(user_id):
+    response = requests.post(
+        f"{BASE_URL}/user/login",
+        json={
+            "username": f"user{user_id - 1}",
+            "password": "password123"
+        }
+    )
+    if response.status_code != 200:
+        return None
+    return response.json().get("access")
+
+
+def buy(user_id, user_name):
+    token = login(user_id)
+    if not token:
+        print(f"\n{user_name} - login failed")
+        return
+
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.post(
+        f"{BASE_URL}/cart/confirm/{user_id}",
+        headers=headers
+    )
 
     print(f"\n{user_name}")
     print("Status:", response.status_code)
     print("Response:", response.text)
 
-thread1 = threading.Thread(target=buy, args=(URL_A, "marwa"))
-thread2 = threading.Thread(target=buy, args=(URL_B, "Aya"))
+
+thread1 = threading.Thread(target=buy, args=(1, "marwa"))
+thread2 = threading.Thread(target=buy, args=(2, "Aya"))
 
 thread1.start()
 thread2.start()

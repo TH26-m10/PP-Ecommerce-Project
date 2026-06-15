@@ -1,14 +1,20 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 
-from store.models import *
-from store.serializers import CartProductSerializer
+from store.auth_helpers import deny_if_not_owner
+from store.models import Cart, CartProduct
 from store.services.inventory import checkout_cart_safely
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def cart_show(request, user_id):
+
+    denied = deny_if_not_owner(request, user_id)
+    if denied:
+        return denied
 
     try:
         user = User.objects.get(id=user_id)
@@ -38,15 +44,20 @@ def cart_show(request, user_id):
             'total_price': total_price
         })
 
-    except Exception as e:
-        return Response({
-            'success': False,
-            'error': str(e)
-        })
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+
+    except Cart.DoesNotExist:
+        return Response({'error': 'Cart not found'}, status=404)
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def cart_empty(request, user_id):
+
+    denied = deny_if_not_owner(request, user_id)
+    if denied:
+        return denied
 
     try:
         user = User.objects.get(id=user_id)
@@ -58,14 +69,20 @@ def cart_empty(request, user_id):
             'message': 'Cart emptied'
         })
 
-    except Exception as e:
-        return Response({
-            'error': str(e)
-        }, status=500)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+
+    except Cart.DoesNotExist:
+        return Response({'error': 'Cart not found'}, status=404)
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def cart_confirm_payment(request, user_id):
+
+    denied = deny_if_not_owner(request, user_id)
+    if denied:
+        return denied
 
     try:
         user = User.objects.get(id=user_id)
@@ -79,15 +96,11 @@ def cart_confirm_payment(request, user_id):
 
         return Response({
             'message': 'Payment successful',
-            'order_id': order.id
+            'order_id': order.id,
+            'total_amount': order.total_amount
         })
 
     except User.DoesNotExist:
         return Response({
             'message': 'User not found'
         }, status=404)
-
-    except Exception as e:
-        return Response({
-            'error': str(e)
-        }, status=500)

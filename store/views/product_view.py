@@ -1,9 +1,6 @@
-from django.shortcuts import render
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework import status
-from django.db import transaction
-from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import F
 
@@ -11,46 +8,57 @@ from store.serializers import (
     ProductSerializer,
 )
 
-from store.models import *
+from store.models import Product
+
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def product_create(request):
 
-    product = Product.objects.create(
-        name = request.data.get('name'),
-        quantity = request.data.get('quantity'),
-        price = request.data.get('price')
-    )
+    serializer = ProductSerializer(data=request.data)
 
-    serializer = ProductSerializer(product)
-    return Response(serializer.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=400)
+
+    serializer.save()
+    return Response(serializer.data, status=201)
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 @transaction.atomic
 def product_update(request, product_id):
 
-    product = Product.objects.select_for_update().get(id=product_id)
+    try:
+        product = Product.objects.select_for_update().get(id=product_id)
+    except Product.DoesNotExist:
+        return Response({'error': 'Product not found'}, status=404)
 
-    product.name = request.data.get('name')
-    product.quantity = request.data.get('quantity')
-    product.price = request.data.get('price')
+    serializer = ProductSerializer(product, data=request.data, partial=True)
 
-    product.save()
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=400)
 
-    serializer = ProductSerializer(product)
-
+    serializer.save()
     return Response(serializer.data)
 
+
 @api_view(['POST'])
-def product_delete(request,product_id):
-    product = Product.objects.get(id=product_id)
+@permission_classes([AllowAny])
+def product_delete(request, product_id):
+
+    try:
+        product = Product.objects.get(id=product_id)
+    except Product.DoesNotExist:
+        return Response({'error': 'Product not found'}, status=404)
+
     product.delete()
-    
+
     return Response({'message': 'Product deleted'})
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def product_show(request):
     products = Product.objects.all()
     serializer = ProductSerializer(products, many=True)
@@ -58,25 +66,43 @@ def product_show(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def product_show_one(request, product_id):
     try:
         product = Product.objects.get(id=product_id)
 
     except Product.DoesNotExist:
-        return Response({'error': 'Product not found'})
+        return Response({'error': 'Product not found'}, status=404)
 
     serializer = ProductSerializer(product)
     return Response(serializer.data)
 
 
-
 @api_view(['POST'])
+@permission_classes([AllowAny])
 @transaction.atomic
 def product_add_quantity(request, product_id):
 
-    quantity = int(request.data.get('quantity'))
+    quantity = request.data.get('quantity')
 
-    product = Product.objects.select_for_update().get(id=product_id)
+    if quantity is None:
+        return Response({'message': 'Quantity is required'}, status=400)
+
+    try:
+        quantity = int(quantity)
+    except (TypeError, ValueError):
+        return Response({'message': 'Invalid quantity'}, status=400)
+
+    if quantity <= 0:
+        return Response(
+            {'message': 'Quantity must be greater than zero'},
+            status=400
+        )
+
+    try:
+        product = Product.objects.select_for_update().get(id=product_id)
+    except Product.DoesNotExist:
+        return Response({'error': 'Product not found'}, status=404)
 
     product.quantity = F('quantity') + quantity
     product.save(update_fields=['quantity'])

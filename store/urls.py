@@ -1,4 +1,5 @@
 from django.urls import path
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from store.views.user_view import *
 from store.views.bank_view import *
@@ -13,6 +14,11 @@ urlpatterns = [
     # ================= USER =================
 
     path('user/create', user_create),
+    path('user/login', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+
+    # ================= BANK =================
+
+    path('bank/show/<int:user_id>', bank_show),
 
     # ================= PRODUCT =================
 

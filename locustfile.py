@@ -1,8 +1,19 @@
 from locust import HttpUser, task, between
 import random
 
-from locust import HttpUser, task, between
-import random
+
+def login_as_user(client, user_id):
+    username = f"user{user_id - 1}"
+    response = client.post(
+        "/api/user/login",
+        json={
+            "username": username,
+            "password": "password123"
+        }
+    )
+    if response.status_code != 200:
+        return None
+    return response.json().get("access")
 
 
 class CartPaymentUser(HttpUser):
@@ -11,7 +22,12 @@ class CartPaymentUser(HttpUser):
 
     def on_start(self):
 
-        self.user_id = random.randint(1, 301)
+        self.user_id = random.randint(1, 300)
+        token = login_as_user(self.client, self.user_id)
+        if token:
+            self.client.headers.update({
+                "Authorization": f"Bearer {token}"
+            })
 
     @task
     def confirm_payment(self):
@@ -25,10 +41,7 @@ class EcommerceUser(HttpUser):
 
     wait_time = between(0.1, 0.3)
 
-    # users موجودين
     user_ids = list(range(1, 100))
-
-    # products موجودة
     product_ids = list(range(1, 200))
 
     @task
@@ -36,21 +49,14 @@ class EcommerceUser(HttpUser):
 
         try:
 
-            # =========================
-            # random user/product
-            # =========================
+            user_id = random.choice(self.user_ids)
+            product_id = random.choice(self.product_ids)
 
-            user_id = random.choice(
-                self.user_ids
-            )
+            token = login_as_user(self.client, user_id)
+            if not token:
+                return
 
-            product_id = random.choice(
-                self.product_ids
-            )
-
-            # =========================
-            # add product to cart
-            # =========================
+            headers = {"Authorization": f"Bearer {token}"}
 
             add_response = self.client.post(
                 "/api/cart-product/create",
@@ -58,7 +64,8 @@ class EcommerceUser(HttpUser):
                     "user_id": user_id,
                     "product_id": product_id,
                     "quantity": 1
-                }
+                },
+                headers=headers
             )
 
             print(
@@ -67,12 +74,9 @@ class EcommerceUser(HttpUser):
                 f"status={add_response.status_code}"
             )
 
-            # =========================
-            # confirm payment
-            # =========================
-
-            confirm_response = self.client.get(
-                f"/api/cart/confirm/{user_id}"
+            confirm_response = self.client.post(
+                f"/api/cart/confirm/{user_id}",
+                headers=headers
             )
 
             print(
@@ -81,12 +85,9 @@ class EcommerceUser(HttpUser):
                 f"response={confirm_response.text}"
             )
 
-            # =========================
-            # get orders
-            # =========================
-
             orders_response = self.client.get(
-                f"/api/order/show/{user_id}"
+                f"/api/order/show/{user_id}",
+                headers=headers
             )
 
             if orders_response.status_code != 200:
@@ -98,62 +99,28 @@ class EcommerceUser(HttpUser):
                 return
 
             latest_order = orders[-1]
-
             order_id = latest_order["order_id"]
 
-            # =========================
-            # preparing
-            # =========================
+            self.client.post(
+                f"/api/order/change-status/{order_id}",
+                json={"status": "preparing"},
+                headers=headers
+            )
 
             self.client.post(
                 f"/api/order/change-status/{order_id}",
-                json={
-                    "status": "preparing"
-                }
+                json={"status": "delivering"},
+                headers=headers
             )
-
-            # =========================
-            # delivering
-            # =========================
 
             self.client.post(
                 f"/api/order/change-status/{order_id}",
-                json={
-                    "status": "delivering"
-                }
+                json={"status": "success"},
+                headers=headers
             )
 
-            # =========================
-            # success
-            # =========================
-
-            self.client.post(
-                f"/api/order/change-status/{order_id}",
-                json={
-                    "status": "success"
-                }
-            )
-
-            print(
-                f"SUCCESS ORDER => {order_id}"
-            )
+            print(f"SUCCESS ORDER => {order_id}")
 
         except Exception as e:
 
             print(f"ERROR => {str(e)}")
-
-
-class CartPaymentUser(HttpUser):
-
-    wait_time = between(1, 2)
-
-    def on_start(self):
-
-        self.user_id = random.randint(1, 301)
-
-    @task
-    def confirm_payment(self):
-
-        self.client.post(
-            f"/api/cart/confirm/{self.user_id}"
-        )

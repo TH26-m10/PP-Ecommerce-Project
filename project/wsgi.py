@@ -13,4 +13,7 @@ from django.core.wsgi import get_wsgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.settings')
 
+from project.db_compat import allow_local_mariadb
+allow_local_mariadb()
+
 application = get_wsgi_application()

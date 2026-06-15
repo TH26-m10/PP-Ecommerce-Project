@@ -1,6 +1,11 @@
+from decimal import Decimal
+
 from django.db import transaction
 from django.db.models import F
-from store.models import Cart, CartProduct, Product, Order, ProductOrder
+
+from store.models import Bank, Cart, CartProduct, Order, Product, ProductOrder
+from store.views.bank_view import bank_pay
+
 
 @transaction.atomic
 def checkout_cart_safely(user):
@@ -22,7 +27,6 @@ def checkout_cart_safely(user):
     for item in items:
         required[item.product_id] = required.get(item.product_id, 0) + item.quantity
 
-    # ->
     products = Product.objects.select_for_update().filter(
         id__in=required.keys()
     ).order_by('id')
@@ -37,7 +41,25 @@ def checkout_cart_safely(user):
         if product.quantity < qty:
             return None, f'{product.name} out of stock'
 
-    order = Order.objects.create(user=user, status='pending')
+    total_amount = sum(
+        item.product.price * item.quantity for item in items
+    )
+
+    bank = Bank.objects.select_for_update().filter(user=user).first()
+    if not bank:
+        return None, 'Bank account not found'
+
+    if bank.balance < Decimal(str(total_amount)):
+        return None, 'Insufficient balance'
+
+    if not bank_pay(bank.id, total_amount):
+        return None, 'Payment failed'
+
+    order = Order.objects.create(
+        user=user,
+        status='pending',
+        total_amount=total_amount
+    )
 
     for item in items:
         ProductOrder.objects.create(
@@ -46,7 +68,6 @@ def checkout_cart_safely(user):
             quantity=item.quantity,
             price=item.product.price
         )
-        # ->
         Product.objects.filter(id=item.product_id).update(
             quantity=F('quantity') - item.quantity
         )

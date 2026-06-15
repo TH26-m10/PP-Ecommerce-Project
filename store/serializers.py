@@ -26,11 +26,25 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
 # Product Serializer
 class ProductSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Product
         fields = '__all__'
 
+    def validate_quantity(self, value):
+        if value < 0:
+            raise serializers.ValidationError('Quantity cannot be negative')
+        return value
+
+    def validate_price(self, value):
+        if value <= 0:
+            raise serializers.ValidationError('Price must be greater than zero')
+        return value
+
 class ProductOrderSerializer(serializers.ModelSerializer):
+
+    product_name = serializers.CharField(source='product.name', read_only=True)
+
     class Meta:
         model = ProductOrder
         fields = '__all__'

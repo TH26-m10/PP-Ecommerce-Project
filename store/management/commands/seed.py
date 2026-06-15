@@ -3,7 +3,6 @@ from django.db import connection
 from django.contrib.auth.models import User
 from faker import Faker
 from decimal import Decimal
-from django.contrib.auth.hashers import make_password
 import random
 
 from store.models import (
@@ -14,6 +13,7 @@ from store.models import (
     Cart,
     CartProduct
 )
+from store.product_names import realistic_product_names
 
 fake = Faker()
 
@@ -57,18 +57,15 @@ class Command(BaseCommand):
         users = []
 
         for i in range(300):
-
-            users.append(
-                User(
-                    username=f"user{i}",
-                    email=fake.email(),
-                    password=make_password("password123")
-                )
+            user = User.objects.create_user(
+                username=f"user{i}",
+                email=fake.email(),
+                password="password123"
             )
+            users.append(user)
 
-        User.objects.bulk_create(users, batch_size=1000)
-
-        users = list(User.objects.all())
+            if (i + 1) % 50 == 0:
+                self.stdout.write(f"  {i + 1} users created")
 
         # =========================
         # BANKS
@@ -82,7 +79,7 @@ class Command(BaseCommand):
                 balance=Decimal(random.randint(10000, 100000))
             )
             for user in users
-        ])
+        ], batch_size=100)
 
         # =========================
         # PRODUCTS
@@ -90,14 +87,15 @@ class Command(BaseCommand):
 
         self.stdout.write("Creating products...")
 
+        product_names = realistic_product_names(300)
         products = []
 
-        for _ in range(300):
+        for name in product_names:
 
             product = Product.objects.create(
-                name=fake.word(),
-                price=Decimal(random.randint(5, 500)),
-                quantity=random.randint(1000, 5000)
+                name=name,
+                price=Decimal(str(round(random.uniform(9.99, 499.99), 2))),
+                quantity=random.randint(100, 5000)
             )
 
             products.append(product)
@@ -116,7 +114,7 @@ class Command(BaseCommand):
 
             carts.append(cart)
 
-        Cart.objects.bulk_create(carts)
+        Cart.objects.bulk_create(carts, batch_size=100)
 
         all_carts = list(Cart.objects.select_related('user'))
 
@@ -147,7 +145,7 @@ class Command(BaseCommand):
 
         CartProduct.objects.bulk_create(
             cart_products,
-            batch_size=5000
+            batch_size=500
         )
 
         # =========================
@@ -175,7 +173,7 @@ class Command(BaseCommand):
                 )
             )
 
-        Order.objects.bulk_create(orders)
+        Order.objects.bulk_create(orders, batch_size=100)
 
         all_orders = list(Order.objects.select_related('user'))
 
@@ -207,8 +205,17 @@ class Command(BaseCommand):
 
         ProductOrder.objects.bulk_create(
             product_orders,
-            batch_size=5000
+            batch_size=500
         )
+
+        self.stdout.write("Updating order totals...")
+
+        for order in all_orders:
+            total_amount = sum(
+                item.price * item.quantity
+                for item in ProductOrder.objects.filter(order=order)
+            )
+            Order.objects.filter(id=order.id).update(total_amount=total_amount)
 
         self.stdout.write(
             self.style.SUCCESS(

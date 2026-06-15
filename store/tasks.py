@@ -1,4 +1,5 @@
 from celery import shared_task
+from django.conf import settings
 from django.core.mail import EmailMessage
 from store.models import Order, ProductOrder
 from reportlab.pdfgen import canvas
@@ -42,11 +43,15 @@ def generate_invoice_task(self, order_id):
         buffer.seek(0)
         pdf_data = buffer.getvalue()
 
+        recipient = getattr(order.user, 'email', None) or settings.DEFAULT_FROM_EMAIL
+        if not recipient or not settings.EMAIL_HOST_USER:
+            return "Email not configured"
+
         email = EmailMessage(
             subject=f"Invoice Order #{order.id}",
             body="Find your invoice attached.",
-            from_email="saraatiah78@gmail.com",
-            to=["saraatiah88@gmail.com"],
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[recipient],
         )
 
         email.attach(

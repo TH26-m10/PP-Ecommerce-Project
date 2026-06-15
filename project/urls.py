@@ -16,9 +16,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+
+from store.views.home_view import home
 
 urlpatterns = [
+    path('', home),
     path('admin/', admin.site.urls),
     path('api/', include('store.urls')),
     path('', include('django_prometheus.urls')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += staticfiles_urlpatterns()
