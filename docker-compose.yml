@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+
+  db:
+    image: mariadb:10.11
+    container_name: ecommerce_db
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ecommerce
+      MYSQL_USER: sara
+      MYSQL_PASSWORD: sara123
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - db_data:/var/lib/mysql
+
+  redis:
+    image: redis:7
+    container_name: ecommerce_redis
+
+    ports:
+      - "6379:6379"
+
+  web:
+    build: .
+    container_name: ecommerce_web
+
+    command: python manage.py runserver 0.0.0.0:8000
+
+    volumes:
+      - .:/app
+
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  db_data:
