@@ -14,3 +14,4 @@ django-celery-beat
 mysqlclient
 psutil
 faker
+locust 

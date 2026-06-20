@@ -78,7 +78,7 @@ def demo_user_create_failure():
     print("WITH transaction.atomic: User + Cart + Bank should ALL be rolled back.")
     print("WITHOUT transaction.atomic: User + Cart exist, but NO Bank (orphaned data!).\n")
 
-    cleanup()
+    # cleanup()
     show_db("BEFORE")
 
     factory = APIRequestFactory()
@@ -132,9 +132,10 @@ def demo_checkout_payment_failure():
     print("WITH transaction.atomic: Order + stock deduction + bank charge all rolled back.")
     print("WITHOUT transaction.atomic: Order exists, stock deducted, bank charged — CORRUPTED!\n")
 
-    cleanup()
+    # cleanup()
 
-    user = User.objects.create_user(username='demo_buyer', password='pass')
+    user = User.objects.create_user(
+        username='demo_buyer', password='pass', email='demo_buyer@gmail.com')
     bank = Bank.objects.create(user=user, balance=Decimal('1000.00'))
     cart = Cart.objects.create(user=user)
     product = Product.objects.create(
@@ -145,8 +146,6 @@ def demo_checkout_payment_failure():
 
     import store.services.inventory as inv
     original_bank_pay = inv.bank_pay
-
-    call_count = [0]
 
     def fake_bank_pay(bank_id, amount):
         # call_count[0] += 1
@@ -200,9 +199,10 @@ def demo_checkout_productorder_failure():
     print("WITHOUT transaction.atomic: Order exists, stock deducted, bank charged,")
     print("                            but NO ProductOrder records — CORRUPTED!\n")
 
-    cleanup()
+    # cleanup()
 
-    user = User.objects.create_user(username='demo_buyer2', password='pass')
+    user = User.objects.create_user(
+        username='demo_buyer2', password='pass', email='demo_buyer2@gmail.com')
     bank = Bank.objects.create(user=user, balance=Decimal('1000.00'))
     cart = Cart.objects.create(user=user)
     product = Product.objects.create(
@@ -260,10 +260,12 @@ def demo_order_cancel_failure():
     print("WITH transaction.atomic: Refund + stock restore rolled back. Order stays pending.")
     print("WITHOUT transaction.atomic: Bank refunded, stock NOT restored, order may be cancelled — CORRUPTED!\n")
 
-    cleanup()
+    # cleanup()
 
-    user = User.objects.create_user(username='demo_buyer3', password='pass')
+    user = User.objects.create_user(
+        username='demo_buyer3', password='pass', email='demo_buyer3@gmail.com')
     bank = Bank.objects.create(user=user, balance=Decimal('800.00'))
+    cart = Cart.objects.create(user=user)
     product = Product.objects.create(
         name='Demo Product 3', price=Decimal('100.00'), quantity=8)
     order = Order.objects.create(
@@ -278,7 +280,6 @@ def demo_order_cancel_failure():
 
     def fake_filter(*args, **kwargs):
         qs = original_filter(*args, **kwargs)
-        original_qs_update = qs.update
 
         def fake_qs_update(*args, **kwargs):
             print(f"\n    [FAKE] Product.objects.filter().update: CRASHING!")
@@ -338,30 +339,12 @@ def demo_order_cancel_failure():
 # ═══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == '__main__':
-    print("""
-╔══════════════════════════════════════════════════════════════════════╗
-║  DJANGO + MARIADB TRANSACTION DEMONSTRATION                          ║
-╠══════════════════════════════════════════════════════════════════════╣
-║  This script demonstrates what happens WITH vs WITHOUT                 ║
-║  @transaction.atomic and select_for_update().                        ║
-║                                                                      ║
-║  TO TEST WITHOUT TRANSACTIONS:                                       ║
-║  1. Comment out @transaction.atomic in user_create()                   ║
-║  2. Comment out with transaction.atomic() in checkout_cart_safely()  ║
-║  3. Comment out @transaction.atomic in order_cancel()                ║
-║  4. Remove all .select_for_update() calls                            ║
-║  5. Run this script again and compare results                        ║
-╚══════════════════════════════════════════════════════════════════════╝
-""")
-
+    cleanup()
     demo_user_create_failure()
     demo_checkout_payment_failure()
     demo_checkout_productorder_failure()
     demo_order_cancel_failure()
 
     banner("ALL DEMOS COMPLETE")
-    print("Check your database directly to verify the final state.")
-    print("Compare results with and without transactions enabled.")
-
     sys.stdout.close()
     sys.stdout = sys.stdout.terminal
