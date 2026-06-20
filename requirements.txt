@@ -1,10 +1,17 @@
-Django== 5.2.6
-django_redis==7.0.0
+asgiref==3.11.1
+Django==6.0.5
 djangorestframework==3.17.1
-Faker==40.23.0
-locust==2.32.0
-prometheus_client==0.25.0
-psutil==7.2.1
-reportlab==5.0.0
-Requests==2.34.2
-rest_framework_simplejwt==0.0.2
+djangorestframework_simplejwt==5.5.1
+django-redis==5.4.0
+PyJWT==2.12.1
+sqlparse==0.5.5
+tzdata==2026.2
+celery==5.6.3
+redis==7.4.0
+reportlab
+waitress
+django-prometheus
+django-celery-beat
+mysqlclient
+psutil
+faker
