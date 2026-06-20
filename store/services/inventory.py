@@ -1,4 +1,6 @@
 from decimal import Decimal
+import random
+import time
 
 from django.db import transaction
 from django.db.models import F
@@ -8,24 +10,28 @@ from store.views.bank_view import bank_pay
 from django_redis import get_redis_connection
 
 
-@transaction.atomic
 def checkout_cart_safely(user):
 
-    redis_client = get_redis_connection("default")
+    time.sleep(2)
+    payment_success = random.randint(1, 10) <= 9
+    if not payment_success:
+        return None, 'Payment failed', None
 
-    lock = redis_client.lock(
-        f"checkout:{user.id}",
-        timeout=30,
-        blocking_timeout=1
-    )
-
-    if not lock.acquire(blocking=False):
-        return None, "Checkout already in progress", None
-
-    try:
-
+    with transaction.atomic():
+        # cart = Cart.objects.get(user=user)
+        # bank = Bank.objects.filter(user=user).first()
         cart = Cart.objects.select_for_update().get(user=user)
+        bank = Bank.objects.select_for_update().filter(user=user).first()
 
+        if not bank:
+            return None, 'Bank account not found', None
+
+        # items = list(
+        #     CartProduct.objects
+        #     .select_related('product')
+        #     .filter(cart=cart)
+        #     .order_by('product_id')
+        # )
         items = list(
             CartProduct.objects
             .select_related('product')
@@ -38,13 +44,13 @@ def checkout_cart_safely(user):
             return None, 'Cart is empty', None
 
         required = {}
-
         for item in items:
-            required[item.product_id] = (
-                required.get(item.product_id, 0)
-                + item.quantity
-            )
+            required[item.product_id] = required.get(
+                item.product_id, 0) + item.quantity
 
+        # products = Product.objects.filter(
+        #     id__in=required.keys()
+        # ).order_by('id')
         products = Product.objects.select_for_update().filter(
             id__in=required.keys()
         ).order_by('id')
@@ -52,29 +58,15 @@ def checkout_cart_safely(user):
         product_map = {p.id: p for p in products}
 
         for product_id, qty in required.items():
-
             product = product_map.get(product_id)
-
             if not product:
                 return None, 'Product not found', None
-
             if product.quantity < qty:
                 return None, f'{product.name} out of stock', None
 
         total_amount = sum(
-            item.product.price * item.quantity
-            for item in items
+            item.product.price * item.quantity for item in items
         )
-
-        bank = (
-            Bank.objects
-            .select_for_update()
-            .filter(user=user)
-            .first()
-        )
-
-        if not bank:
-            return None, 'Bank account not found', None
 
         if bank.balance < Decimal(str(total_amount)):
             return None, 'Insufficient balance', None
@@ -89,27 +81,17 @@ def checkout_cart_safely(user):
         )
 
         for item in items:
-
             ProductOrder.objects.create(
                 product=item.product,
                 order=order,
                 quantity=item.quantity,
                 price=item.product.price
             )
-
-            Product.objects.filter(
-                id=item.product_id
-            ).update(
+            Product.objects.filter(id=item.product_id).update(
                 quantity=F('quantity') - item.quantity
             )
 
         CartProduct.objects.filter(cart=cart).delete()
 
         return order, None, items
-
-    finally:
-
-        if lock.owned():
-            lock.release()
-
 

@@ -12,6 +12,7 @@ from store.auth_helpers import deny_if_not_owner
 from store.celery_utils import safe_delay
 from store.models import Bank
 from store.tasks import simulate_payment_task
+from django.db import transaction
 
 
 @api_view(['GET'])
@@ -41,11 +42,11 @@ def bank_show(request, user_id):
 
 def bank_pay(bank_id, amount):
 
-    time.sleep(2)
-    payment_success = random.randint(1, 10) <= 9
+    # time.sleep(2)
+    # payment_success = random.randint(1, 10) <= 9
 
-    if not payment_success:
-        return False
+    # if not payment_success:
+    #     return False
 
     try:
         bank = Bank.objects.get(id=bank_id)

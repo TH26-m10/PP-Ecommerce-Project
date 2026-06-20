@@ -113,6 +113,7 @@ def order_cancel(request, order_id):
 
     try:
         order = Order.objects.select_for_update().get(id=order_id)
+        # order = Order.objects.get(id=order_id)
 
         denied = deny_if_not_order_owner(request, order)
         if denied:
@@ -122,11 +123,13 @@ def order_cancel(request, order_id):
             return Response({'error': 'Order has no owner'}, status=400)
 
         bank = Bank.objects.select_for_update().get(user_id=order.user_id)
+        # bank = Bank.objects.get(user_id=order.user_id)
 
         if order.status != 'pending':
             return Response({'message': 'Cannot cancel this order'}, status=400)
 
-        items = ProductOrder.objects.select_related('product').filter(order=order)
+        items = ProductOrder.objects.select_related(
+            'product').filter(order=order)
 
         total_price = sum(item.price * item.quantity for item in items)
 
@@ -137,15 +140,13 @@ def order_cancel(request, order_id):
             item.product_id for item in items if item.product_id
         ]
         if product_ids:
-            Product.objects.select_for_update().filter(
-                id__in=product_ids
-            ).order_by('id')
-
             for item in items:
                 if item.product_id:
-                    Product.objects.filter(id=item.product_id).update(
-                        quantity=F('quantity') + item.quantity
-                    )
+                    Product.objects.select_for_update().filter(
+                        id=item.product_id).update(quantity=F('quantity') + item.quantity)
+                    # Product.objects.filter(id=item.product_id).update(
+                    #     quantity=F('quantity') + item.quantity
+                    # )
 
         order.status = 'cancelled'
         order.save(update_fields=['status'])

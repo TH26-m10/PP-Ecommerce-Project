@@ -49,7 +49,9 @@ urlpatterns = [
     path('order/change-status/<int:order_id>', order_change_status),
     path('order/cancel/<int:order_id>', order_cancel),
 
-    # =================
+    # ================= LOAD BALANCER =================
+
     path('load-balance', distribute_request),
+    path('load-balance/lrt-status', lrt_status),
 
 ]

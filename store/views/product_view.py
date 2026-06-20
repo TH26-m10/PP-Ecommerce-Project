@@ -13,7 +13,8 @@ from django_redis import get_redis_connection
 import time
 
 PRODUCT_CACHE_PREFIX = "product"
-CHCHE_TIMEOUT_TO_LIVE=30
+
+CHCHE_TIMEOUT_TO_LIVE = 30
 
 BEST_SELLERS_CACHE_KEY = "best_sellers"
 BEST_SELLERS_LOCK_KEY = "best_sellers_rebuild"
@@ -108,6 +109,7 @@ def product_add_quantity(request, product_id):
 
     try:
         product = Product.objects.select_for_update().get(id=product_id)
+        # product = Product.objects.get(id=product_id)
     except Product.DoesNotExist:
         return Response({'error': 'Product not found'}, status=404)
 

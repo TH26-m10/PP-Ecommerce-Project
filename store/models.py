@@ -18,6 +18,14 @@ class Bank(models.Model):
         decimal_places=2
     )
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(balance__gte=0),
+                name='bank_balance_non_negative'
+            )
+        ]
+
     def __str__(self):
         return f"Bank Account {self.id} ({self.balance})"
 
@@ -41,6 +49,10 @@ class Product(models.Model):
             models.CheckConstraint(
                 condition=Q(quantity__gte=0),
                 name='product_quantity_non_negative'
+            ),
+            models.CheckConstraint(
+                condition=Q(price__gt=0),
+                name='product_price_positive'
             )
         ]
 
@@ -60,6 +72,18 @@ class DailySummary(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True
     )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(total_revenue__gte=0),
+                name='dailysummary_revenue_non_negative'
+            ),
+            models.CheckConstraint(
+                condition=Q(orders_processed__gte=0),
+                name='dailysummary_orders_non_negative'
+            )
+        ]
 
     def __str__(self):
         return str(self.date)
@@ -98,6 +122,14 @@ class Order(models.Model):
         auto_now_add=True
     )
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(total_amount__gte=0),
+                name='order_total_amount_non_negative'
+            )
+        ]
+
     def __str__(self):
         return f"Order {self.id}"
 
@@ -128,6 +160,16 @@ class ProductOrder(models.Model):
 
     class Meta:
         unique_together = ['product', 'order']
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(price__gt=0),
+                name='productorder_price_positive'
+            ),
+            models.CheckConstraint(
+                condition=Q(quantity__gt=0),
+                name='productorder_quantity_positive'
+            )
+        ]
 
 
 class Cart(models.Model):
@@ -167,6 +209,12 @@ class CartProduct(models.Model):
 
     class Meta:
         unique_together = ['cart', 'product']
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(quantity__gt=0),
+                name='cartproduct_quantity_positive'
+            )
+        ]
 
     def __str__(self):
         return f"{self.product.name} in cart"

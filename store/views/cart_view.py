@@ -22,7 +22,8 @@ def cart_show(request, user_id):
         user = User.objects.get(id=user_id)
         cart = Cart.objects.get(user=user)
 
-        cart_products = CartProduct.objects.filter(cart=cart)
+        cart_products = CartProduct.objects.select_related(
+            'product').filter(cart=cart)
 
         total_price = 0
         data = []
