@@ -6,6 +6,8 @@ from django.contrib.auth.models import User
 from store.auth_helpers import deny_if_not_owner
 from store.models import Cart, CartProduct
 from store.services.inventory import checkout_cart_safely
+from django.core.cache import cache
+
 
 
 @api_view(['GET'])
@@ -88,19 +90,26 @@ def cart_confirm_payment(request, user_id):
     try:
         user = User.objects.get(id=user_id)
 
-        order, error = checkout_cart_safely(user)
+        order, error, items = checkout_cart_safely(user)
+        
+        # ===== CACHE INVALIDATION =====
+        order, error, items = checkout_cart_safely(user)
 
         if error:
             return Response({
                 'message': error
             }, status=400)
 
+        #  invalidate product cache
+        for item in items:
+            if item.product_id:
+                cache.delete(f"product:{item.product_id}")
+
         return Response({
             'message': 'Payment successful',
             'order_id': order.id,
             'total_amount': order.total_amount
         })
-
     except User.DoesNotExist:
         return Response({
             'message': 'User not found'

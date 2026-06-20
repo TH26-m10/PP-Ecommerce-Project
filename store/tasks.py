@@ -70,7 +70,8 @@ def generate_invoice_task(self, order_id):
 
 
     except Exception as e:
-        print("Error:", str(e))
+        import traceback
+        print(traceback.format_exc())
         print("Retry count:", self.request.retries)
 
    
@@ -81,6 +82,7 @@ def generate_invoice_task(self, order_id):
         raise self.retry(exc=e)
     
     # fixed size chunking 
+
 @shared_task(
     bind=True,
     max_retries=3,
