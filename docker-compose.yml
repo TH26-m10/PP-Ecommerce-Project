@@ -19,6 +19,7 @@ services:
     ports:
       - "6379:6379"
 
+
   migrate:
     build: .
     environment: &django_env
@@ -30,12 +31,42 @@ services:
       DB_PORT: "3306"
       ALLOWED_HOSTS: "*"
       RUN_MIGRATIONS: "1"
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
     depends_on:
       mysql:
         condition: service_healthy
     restart: "no"
     command: ["echo", "migrations complete"]
 
+  celery:
+    build: .
+    command: celery -A project worker -l info
+    environment:
+      <<: *django_env
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  celery-beat:
+    build: .
+    command: celery -A project beat -l info
+    environment:
+      <<: *django_env
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
   web1:
     build: .
     environment:

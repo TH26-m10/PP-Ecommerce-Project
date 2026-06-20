@@ -7,6 +7,7 @@ from django.db.models import F
 
 from store.models import Bank, Cart, CartProduct, Order, Product, ProductOrder
 from store.views.bank_view import bank_pay
+from django_redis import get_redis_connection
 
 
 def checkout_cart_safely(user):
@@ -93,3 +94,4 @@ def checkout_cart_safely(user):
         CartProduct.objects.filter(cart=cart).delete()
 
         return order, None, items
+
