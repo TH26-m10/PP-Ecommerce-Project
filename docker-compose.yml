@@ -1,0 +1,98 @@
+services:
+  mysql:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: store
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-prootpass"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  migrate:
+    build: .
+    environment: &django_env
+      DJANGO_SECRET_KEY: docker-dev-secret-key
+      DB_NAME: store
+      DB_USER: root
+      DB_PASSWORD: rootpass
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      ALLOWED_HOSTS: "*"
+      RUN_MIGRATIONS: "1"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: "no"
+    command: ["echo", "migrations complete"]
+
+  web1:
+    build: .
+    environment:
+      <<: *django_env
+      CELERY_BROKER_URL: redis://redis:6379/0
+      LRT_PROXY_STATUS_URL: http://lb:9000/lb/status
+      SERVER_NAME: web1
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    expose:
+      - "8000"
+
+  web2:
+    build: .
+    environment:
+      <<: *django_env
+      CELERY_BROKER_URL: redis://redis:6379/0
+      LRT_PROXY_STATUS_URL: http://lb:9000/lb/status
+      SERVER_NAME: web2
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    expose:
+      - "8000"
+
+  web3:
+    build: .
+    environment:
+      <<: *django_env
+      CELERY_BROKER_URL: redis://redis:6379/0
+      LRT_PROXY_STATUS_URL: http://lb:9000/lb/status
+      SERVER_NAME: web3
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    expose:
+      - "8000"
+
+  lb:
+    build: ./load_balancer
+    ports:
+      - "8080:9000"
+    environment:
+      BACKENDS: http://web1:8000,http://web2:8000,http://web3:8000
+      LRT_WINDOW: "20"
+      LRT_HEALTH_PATH: /api/product/all
+    depends_on:
+      - web1
+      - web2
+      - web3
+
+volumes:
+  mysql_data:

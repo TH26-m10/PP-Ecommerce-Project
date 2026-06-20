@@ -360,6 +360,12 @@ document.getElementById('btn-load-balance').addEventListener('click', async () =
     ok ? JSON.stringify(data, null, 2) : 'فشل الاتصال';
 });
 
+document.getElementById('btn-lrt-status').addEventListener('click', async () => {
+  const { ok, data } = await api('GET', '/load-balance/lrt-status');
+  document.getElementById('load-balance-result').textContent =
+    ok ? JSON.stringify(data, null, 2) : 'فشل الاتصال';
+});
+
 // ── Utils ────────────────────────────────────────────
 
 function esc(str) {

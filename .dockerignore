@@ -1,0 +1,15 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+db.sqlite3
+.env
+.idea/
+.vscode/
+*.log
+*.pid
+.DS_Store
+Thumbs.db
+.git/
+celerybeat-schedule*
