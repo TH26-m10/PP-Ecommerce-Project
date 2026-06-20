@@ -103,7 +103,7 @@ def concurrent_checkout_last_item():
     def buyer_checkout(user):
         try:
             barrier.wait()  # Both start at the same time
-            order, error = checkout_cart_safely(user)
+            order, error, items = checkout_cart_safely(user)
             with lock:
                 if order:
                     results['success'] += 1
@@ -369,7 +369,7 @@ def concurrent_cancel_and_checkout():
     def do_checkout():
         barrier.wait()
         try:
-            order_new, error = checkout_cart_safely(user)
+            order_new, error, items = checkout_cart_safely(user)
             with lock:
                 if order_new:
                     results['checkout'] = f"OK: Order #{order_new.id}"
@@ -444,7 +444,7 @@ def concurrent_add_stock_and_checkout():
     def do_checkout():
         barrier.wait()
         try:
-            order, error = checkout_cart_safely(buyer)
+            order, error, items = checkout_cart_safely(buyer)
             with lock:
                 if order:
                     results['checkout'] = f"OK: Order #{order.id}"

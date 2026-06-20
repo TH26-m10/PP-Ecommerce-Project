@@ -24,14 +24,14 @@ WITHOUT locking: Both might pass stock check, stock becomes -1 (OVERSOLD!).
 
 --- BEFORE ---
   Users:         303
-  Products:      306
+  Products:      307
   ProductOrders: 0
-    [OK]  concurrent_buyer2 succeeded — Order #336
     [FAIL] concurrent_buyer1 failed — Concurrent Hot Item out of stock
+    [OK]  concurrent_buyer2 succeeded — Order #351
 
 --- AFTER ---
   Users:         303
-  Products:      306
+  Products:      307
   ProductOrders: 1
 
 >>> RESULTS:
@@ -53,14 +53,14 @@ WITHOUT locking: Lost update — one overwrites the other silently!
 
 --- BEFORE ---
   Users:         302
-  Products:      306
+  Products:      307
   ProductOrders: 0
-    [AdminB] status=200, data={'id': 356, 'name': 'AdminB', 'price': '200.00', 'quantity': 100}
-    [AdminA] status=200, data={'id': 356, 'name': 'AdminA', 'price': '100.00', 'quantity': 100}
+    [AdminB] status=200, data={'id': 380, 'name': 'AdminB', 'price': '200.00', 'quantity': 100}
+    [AdminA] status=200, data={'id': 380, 'name': 'AdminA', 'price': '100.00', 'quantity': 100}
 
 --- AFTER ---
   Users:         302
-  Products:      306
+  Products:      307
   ProductOrders: 0
 
 >>> RESULTS:
@@ -82,22 +82,22 @@ but concurrent adds can exceed stock since no lock is held between check and che
 
 --- BEFORE ---
   Users:         311
-  Products:      307
+  Products:      308
   ProductOrders: 0
-    [OK]  concurrent_cart2 added 5
     [OK]  concurrent_cart9 added 5
-    [OK]  concurrent_cart4 added 5
-    [OK]  concurrent_cart5 added 5
-    [OK]  concurrent_cart8 added 5
-    [OK]  concurrent_cart0 added 5
-    [OK]  concurrent_cart3 added 5
-    [OK]  concurrent_cart6 added 5
     [OK]  concurrent_cart1 added 5
+    [OK]  concurrent_cart2 added 5
+    [OK]  concurrent_cart0 added 5
+    [OK]  concurrent_cart8 added 5
+    [OK]  concurrent_cart6 added 5
     [OK]  concurrent_cart7 added 5
+    [OK]  concurrent_cart3 added 5
+    [OK]  concurrent_cart5 added 5
+    [OK]  concurrent_cart4 added 5
 
 --- AFTER ---
   Users:         311
-  Products:      307
+  Products:      308
   ProductOrders: 0
 
 >>> RESULTS:
@@ -121,21 +121,21 @@ WITHOUT locking: Race condition on bank balance — one might see stale data!
 
 --- BEFORE ---
   Users:         302
-  Products:      308
+  Products:      309
   ProductOrders: 1
     Bank balance: 500.00
     Expected after cancel+checkout: 500 - 200 + 100 = 400 (or 500 - 200 = 300 if cancel fails)
     [CANCEL] status=200, data={'message': 'Order cancelled'}
-    [CHECKOUT] succeeded — Order #338
+    [CHECKOUT] succeeded — Order #353
 
 --- AFTER ---
   Users:         302
-  Products:      308
+  Products:      309
   ProductOrders: 2
 
 >>> RESULTS:
     Cancel result:   200
-    Checkout result: OK: Order #338
+    Checkout result: OK: Order #353
     Final balance:   400.00
 
     [PASS] Balance is consistent: 400.00
@@ -151,20 +151,20 @@ WITHOUT locking: Buyer might see wrong stock count, or stock goes wrong!
 
 --- BEFORE ---
   Users:         303
-  Products:      307
+  Products:      308
   ProductOrders: 0
     NOTE: Stock=15, buyer wants 10 → checkout should succeed
     Admin also adds 50 simultaneously → final stock should be 15+50-10=55
-    [ADD_STOCK] status=200, data={'success': True, 'data': {'id': 360, 'name': 'Concurrent Restock', 'price': '10.00', 'quantity': 65}}
-    [CHECKOUT] succeeded — Order #339
+    [ADD_STOCK] status=200, data={'success': True, 'data': {'id': 384, 'name': 'Concurrent Restock', 'price': '10.00', 'quantity': 65}}
+    [CHECKOUT] succeeded — Order #354
 
 --- AFTER ---
   Users:         303
-  Products:      307
+  Products:      308
   ProductOrders: 1
 
 >>> RESULTS:
-    Checkout:   OK: Order #339
+    Checkout:   OK: Order #354
     Add stock:  200
     Final stock: 55
 

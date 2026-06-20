@@ -11,6 +11,7 @@ reportlab
 waitress
 django-prometheus
 django-celery-beat
+django-redis
 mysqlclient
 psutil
 faker

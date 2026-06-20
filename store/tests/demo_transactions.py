@@ -162,7 +162,7 @@ def demo_checkout_payment_failure():
     inv.bank_pay = fake_bank_pay
 
     try:
-        order, error = checkout_cart_safely(user)
+        order, error, items = checkout_cart_safely(user)
     except Exception as e:
         print(f"\n>>> Exception raised: {e}")
         order = None
@@ -221,7 +221,7 @@ def demo_checkout_productorder_failure():
     store.models.ProductOrder.objects.create = fake_create
 
     try:
-        order, error = checkout_cart_safely(user)
+        order, error, items = checkout_cart_safely(user)
     except Exception as e:
         print(f"\n>>> Exception raised: {e}")
         order = None

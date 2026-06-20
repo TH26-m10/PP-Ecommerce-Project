@@ -40,7 +40,7 @@ def checkout_cart_safely(user):
         )
 
         if not items:
-            return None, 'Cart is empty'
+            return None, 'Cart is empty', None
 
         required = {}
         for item in items:
@@ -68,28 +68,28 @@ def checkout_cart_safely(user):
         )
 
         if bank.balance < Decimal(str(total_amount)):
-            return None, 'Insufficient balance'
+            return None, 'Insufficient balance', None
 
-    if not bank_pay(bank.id, total_amount):
-        return None, 'Payment failed', None
+        if not bank_pay(bank.id, total_amount):
+            return None, 'Payment failed', None
 
-    order = Order.objects.create(
-        user=user,
-        status='pending',
-        total_amount=total_amount
-    )
-
-    for item in items:
-        ProductOrder.objects.create(
-            product=item.product,
-            order=order,
-            quantity=item.quantity,
-            price=item.product.price
-        )
-        Product.objects.filter(id=item.product_id).update(
-            quantity=F('quantity') - item.quantity
+        order = Order.objects.create(
+            user=user,
+            status='pending',
+            total_amount=total_amount
         )
 
-    CartProduct.objects.filter(cart=cart).delete()
+        for item in items:
+            ProductOrder.objects.create(
+                product=item.product,
+                order=order,
+                quantity=item.quantity,
+                price=item.product.price
+            )
+            Product.objects.filter(id=item.product_id).update(
+                quantity=F('quantity') - item.quantity
+            )
 
-    return order, None, items
+        CartProduct.objects.filter(cart=cart).delete()
+
+        return order, None, items
