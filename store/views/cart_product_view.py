@@ -38,6 +38,7 @@ def cart_product_create(request):
     try:
         user = User.objects.get(id=user_id)
         product = Product.objects.select_for_update().get(id=product_id)
+        # product = Product.objects.get(id=product_id)
 
         if quantity > product.quantity:
             return Response(
@@ -54,12 +55,16 @@ def cart_product_create(request):
                 defaults={'quantity': quantity}
             )
         except IntegrityError:
-            transaction.set_rollback(False)
-            cart_product = CartProduct.objects.select_for_update().get(
-                cart=cart,
-                product=product
-            )
-            created = False
+            with transaction.atomic():
+                # cart_product = CartProduct.objects.get(
+                #     cart=cart,
+                #     product=product
+                # )
+                cart_product = CartProduct.objects.select_for_update().get(
+                    cart=cart,
+                    product=product
+                )
+                created = False
 
         if not created:
             new_quantity = cart_product.quantity + quantity
@@ -102,6 +107,9 @@ def cart_product_update(request, cart_product_id):
         return Response({'message': 'Quantity must be greater than zero'}, status=400)
 
     try:
+        # cart_product = CartProduct.objects.select_related(
+        #     'cart', 'product'
+        # ).get(id=cart_product_id)
         cart_product = CartProduct.objects.select_related(
             'cart', 'product'
         ).select_for_update().get(id=cart_product_id)
@@ -110,6 +118,7 @@ def cart_product_update(request, cart_product_id):
         if denied:
             return denied
 
+        # product = Product.objects.get(id=cart_product.product_id)
         product = Product.objects.select_for_update().get(id=cart_product.product_id)
 
         if quantity > product.quantity:

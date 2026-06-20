@@ -31,6 +31,7 @@ def product_update(request, product_id):
 
     try:
         product = Product.objects.select_for_update().get(id=product_id)
+        # product = Product.objects.get(id=product_id)
     except Product.DoesNotExist:
         return Response({'error': 'Product not found'}, status=404)
 
@@ -101,6 +102,7 @@ def product_add_quantity(request, product_id):
 
     try:
         product = Product.objects.select_for_update().get(id=product_id)
+        # product = Product.objects.get(id=product_id)
     except Product.DoesNotExist:
         return Response({'error': 'Product not found'}, status=404)
 
