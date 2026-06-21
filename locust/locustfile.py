@@ -124,3 +124,16 @@ class EcommerceUser(HttpUser):
         except Exception as e:
 
             print(f"ERROR => {str(e)}")
+
+
+
+class BestSellerUser(HttpUser):
+
+    wait_time = between(0.01, 0.05)
+
+    @task
+    def get_best_sellers(self):
+
+        self.client.get(
+            "/api/product/best-sellers"
+        )         
