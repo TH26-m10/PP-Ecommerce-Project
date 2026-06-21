@@ -1,36 +1,20 @@
 
-╔══════════════════════════════════════════════════════════════════════╗
-║  DJANGO + MARIADB CONCURRENCY TESTS                                  ║
-║                                                                      ║
-║  Tests transaction.atomic + select_for_update() under real           ║
-║  concurrent load using threads.                                      ║
-║                                                                      ║
-║  TO TEST WITHOUT LOCKING:                                            ║
-║  1. Remove .select_for_update() from all views                       ║
-║  2. Comment out @transaction.atomic decorators                       ║
-║  3. Comment out with transaction.atomic() in checkout_cart_safely()    ║
-║  4. Run again — expect crashes, negative stock, or overselling       ║
-╚══════════════════════════════════════════════════════════════════════╝
-
-
 ======================================================================
   CONCURRENCY TEST 1: Two Buyers, One Item in Stock
 ======================================================================
 Only 1 item available. Two buyers try to checkout at the same time.
 
 WITH select_for_update + transaction.atomic: Only one succeeds.
-WITHOUT locking: Both might pass stock check, stock becomes -1 (OVERSOLD!).
-
 
 --- BEFORE ---
-  Users:         303
+  Users:         305
   Products:      304
   ProductOrders: 0
-    [FAIL] concurrent_buyer1 failed — Concurrent Hot Item out of stock
-    [OK]  concurrent_buyer2 succeeded — Order #327
+    [FAIL] concurrent_buyer2 failed — Payment failed
+    [OK]  concurrent_buyer1 succeeded — Order #305
 
 --- AFTER ---
-  Users:         303
+  Users:         305
   Products:      304
   ProductOrders: 1
 
@@ -48,100 +32,56 @@ WITHOUT locking: Both might pass stock check, stock becomes -1 (OVERSOLD!).
 Admin A sets price to 100, Admin B sets price to 200 at the same time.
 
 WITH select_for_update + transaction.atomic: One waits, then both apply.
-WITHOUT locking: Lost update — one overwrites the other silently!
-
 
 --- BEFORE ---
-  Users:         302
-  Products:      304
-  ProductOrders: 0
-    [AdminB] status=200, data={'id': 344, 'name': 'AdminB', 'price': '200.00', 'quantity': 100}
-    [AdminA] status=200, data={'id': 344, 'name': 'AdminA', 'price': '100.00', 'quantity': 100}
+  Users:         307
+  Products:      305
+  ProductOrders: 1
+    [Concurrent product AdminB] status=200, data={'id': 310, 'name': 'Concurrent product AdminB', 'price': '200.00', 'quantity': 100}
+    [Concurrent product AdminA] status=200, data={'id': 310, 'name': 'Concurrent product AdminA', 'price': '100.00', 'quantity': 100}
 
 --- AFTER ---
-  Users:         302
-  Products:      304
-  ProductOrders: 0
+  Users:         307
+  Products:      305
+  ProductOrders: 1
 
 >>> RESULTS:
     Final price: 100.00
-    Final name:  AdminA
+    Final name:  Concurrent product AdminA
     Updates done: 2 (expected: 2)
 
     [PASS] Both updates completed without crash.
 
 ======================================================================
-  CONCURRENCY TEST 3: Multiple Users Add Same Product to Cart
-======================================================================
-10 users each add 5 items to cart. Only 20 in stock.
-
-NOTE: Cart does NOT reserve stock — stock is only deducted at checkout.
-This test shows that cart_product_create checks current stock at add time,
-but concurrent adds can exceed stock since no lock is held between check and checkout.
-
-
---- BEFORE ---
-  Users:         311
-  Products:      305
-  ProductOrders: 0
-    [OK]  concurrent_cart0 added 5
-    [OK]  concurrent_cart4 added 5
-    [OK]  concurrent_cart6 added 5
-    [OK]  concurrent_cart1 added 5
-    [OK]  concurrent_cart8 added 5
-    [OK]  concurrent_cart2 added 5
-    [OK]  concurrent_cart9 added 5
-    [OK]  concurrent_cart3 added 5
-    [OK]  concurrent_cart7 added 5
-    [OK]  concurrent_cart5 added 5
-
---- AFTER ---
-  Users:         311
-  Products:      305
-  ProductOrders: 0
-
->>> RESULTS:
-    Success:        10 (expected: 4)
-    Failed:         0 (expected: 6)
-    Final stock:    20 (expected: 0)
-    Total in carts: 50 (expected: 20)
-
-    [INFO] All 10 users added to cart successfully.
-    Total in carts: 50 — exceeds stock by design.
-    Stock protection happens at CHECKOUT via select_for_update(), not at cart add.
-
-======================================================================
-  CONCURRENCY TEST 4: Cancel Order + Checkout Same User
+  CONCURRENCY TEST 3: Cancel Order + Checkout Same User
 ======================================================================
 User cancels an order (gets refund) AND checks out a new cart at the same time.
 
 WITH select_for_update + transaction.atomic: Operations serialize, balance correct.
-WITHOUT locking: Race condition on bank balance — one might see stale data!
-
 
 --- BEFORE ---
-  Users:         302
-  Products:      306
-  ProductOrders: 1
+  Users:         308
+  Products:      307
+  ProductOrders: 2
     Bank balance: 500.00
     Expected after cancel+checkout: 500 - 200 + 100 = 400 (or 500 - 200 = 300 if cancel fails)
     [CANCEL] status=200, data={'message': 'Order cancelled'}
-    [CHECKOUT] succeeded — Order #329
+    [CHECKOUT] succeeded — Order #307
 
 --- AFTER ---
-  Users:         302
-  Products:      306
-  ProductOrders: 2
+  Users:         308
+  Products:      307
+  ProductOrders: 3
 
 >>> RESULTS:
     Cancel result:   200
-    Checkout result: OK: Order #329
+    Checkout result: OK: Order #307
     Final balance:   400.00
 
     [PASS] Balance is consistent: 400.00
 
 ======================================================================
-  CONCURRENCY TEST 5: Add Stock + Checkout Same Product
+  CONCURRENCY TEST 4: Add Stock + Checkout Same Product
 ======================================================================
 Admin adds 50 stock while a buyer checks out 10 items.
 
@@ -150,21 +90,21 @@ WITHOUT locking: Buyer might see wrong stock count, or stock goes wrong!
 
 
 --- BEFORE ---
-  Users:         303
-  Products:      305
-  ProductOrders: 0
+  Users:         310
+  Products:      308
+  ProductOrders: 3
     NOTE: Stock=15, buyer wants 10 → checkout should succeed
     Admin also adds 50 simultaneously → final stock should be 15+50-10=55
-    [ADD_STOCK] status=200, data={'success': True, 'data': {'id': 348, 'name': 'Concurrent Restock', 'price': '10.00', 'quantity': 65}}
-    [CHECKOUT] succeeded — Order #330
+    [ADD_STOCK] status=200, data={'success': True, 'data': {'id': 313, 'name': 'Concurrent Restock', 'price': '10.00', 'quantity': 65}}
+    [CHECKOUT] succeeded — Order #308
 
 --- AFTER ---
-  Users:         303
-  Products:      305
-  ProductOrders: 1
+  Users:         310
+  Products:      308
+  ProductOrders: 4
 
 >>> RESULTS:
-    Checkout:   OK: Order #330
+    Checkout:   OK: Order #308
     Add stock:  200
     Final stock: 55
 
@@ -175,4 +115,3 @@ WITHOUT locking: Buyer might see wrong stock count, or stock goes wrong!
 ======================================================================
   ALL CONCURRENCY TESTS COMPLETE
 ======================================================================
-Check results above. Any [FAIL] means locking is broken.

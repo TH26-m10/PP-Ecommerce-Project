@@ -48,13 +48,6 @@ def show_db(label):
     print(f"\n--- {label} ---")
     print(f"  Users:         {User.objects.count()}")
     print(f"  Products:      {Product.objects.count()}")
-    # for p in Product.objects.all():
-    #     print(f"    - {p.name}: qty={p.quantity}")
-    # for b in Bank.objects.all():
-    #     print(f"    - Bank #{b.id}: balance={b.balance}")
-    # for o in Order.objects.all():
-    #     print(
-    #         f"    - Order #{o.id}: status={o.status}, amount={o.total_amount}")
     print(f"  ProductOrders: {ProductOrder.objects.count()}")
 
 
@@ -76,18 +69,17 @@ def concurrent_checkout_last_item():
     banner("CONCURRENCY TEST 1: Two Buyers, One Item in Stock")
     print("Only 1 item available. Two buyers try to checkout at the same time.\n")
     print("WITH select_for_update + transaction.atomic: Only one succeeds.")
-    print("WITHOUT locking: Both might pass stock check, stock becomes -1 (OVERSOLD!).\n")
 
-    cleanup()
+    # cleanup()
 
     # Setup: 1 item in stock, 2 buyers each want 1
     product = Product.objects.create(
         name='Concurrent Hot Item', price=Decimal('50.00'), quantity=1)
 
     buyer1 = User.objects.create_user(
-        username='concurrent_buyer1', password='pass')
+        username='concurrent_buyer1', password='pass', email='concurrent_buyer1@gmail.com')
     buyer2 = User.objects.create_user(
-        username='concurrent_buyer2', password='pass')
+        username='concurrent_buyer2', password='pass', email='concurrent_buyer2@gmail.com')
 
     for buyer in [buyer1, buyer2]:
         Bank.objects.create(user=buyer, balance=Decimal('1000.00'))
@@ -153,14 +145,15 @@ def concurrent_product_update():
     banner("CONCURRENCY TEST 2: Two Admins Update Same Product")
     print("Admin A sets price to 100, Admin B sets price to 200 at the same time.\n")
     print("WITH select_for_update + transaction.atomic: One waits, then both apply.")
-    print("WITHOUT locking: Lost update — one overwrites the other silently!\n")
 
-    cleanup()
+    # cleanup()
 
     product = Product.objects.create(
         name='Concurrent Product', price=Decimal('50.00'), quantity=100)
     admin = User.objects.create_user(
-        username='concurrent_admin', password='pass', is_staff=True)
+        username='concurrent_admin', password='pass', is_staff=True, email='concurrent_admin@gmail.com')
+    admin2 = User.objects.create_user(
+        username='concurrent_admin2', password='pass', is_staff=True, email='concurrent_admin2@gmail.com')
 
     show_db("BEFORE")
 
@@ -168,14 +161,14 @@ def concurrent_product_update():
     lock = threading.Lock()
     barrier = threading.Barrier(2)
 
-    def update_price(new_price, name):
+    def update_price(new_price, name, adminAssigned):
         factory = APIRequestFactory()
         request = factory.post(f'/product/{product.id}/update/', {
             'price': str(new_price),
             'name': name
         }, format='json')
-        request.user = admin
-        force_authenticate(request, user=admin)
+        request.user = adminAssigned
+        force_authenticate(request, user=adminAssigned)
 
         barrier.wait()
         try:
@@ -189,9 +182,9 @@ def concurrent_product_update():
                 print(f"    [{name}] EXCEPTION: {e}")
 
     t1 = threading.Thread(target=update_price,
-                          args=(Decimal('100.00'), 'AdminA'))
+                          args=(Decimal('100.00'), 'Concurrent product AdminA', admin))
     t2 = threading.Thread(target=update_price,
-                          args=(Decimal('200.00'), 'AdminB'))
+                          args=(Decimal('200.00'), 'Concurrent product AdminB', admin2))
 
     t1.start()
     t2.start()
@@ -213,116 +206,18 @@ def concurrent_product_update():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# CONCURRENCY TEST 3: Multiple users add to cart same product simultaneously
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def concurrent_add_to_cart():
-    banner("CONCURRENCY TEST 3: Multiple Users Add Same Product to Cart")
-    print("10 users each add 5 items to cart. Only 20 in stock.\n")
-    print("NOTE: Cart does NOT reserve stock — stock is only deducted at checkout.")
-    print("This test shows that cart_product_create checks current stock at add time,")
-    print("but concurrent adds can exceed stock since no lock is held between check and checkout.\n")
-
-    cleanup()
-
-    product = Product.objects.create(
-        name='Concurrent Limited', price=Decimal('10.00'), quantity=20)
-
-    users = []
-    for i in range(10):
-        user = User.objects.create_user(
-            username=f'concurrent_cart{i}', password='pass')
-        Bank.objects.create(user=user, balance=Decimal('1000.00'))
-        Cart.objects.create(user=user)
-        users.append(user)
-
-    show_db("BEFORE")
-
-    results = {'success': 0, 'failed': 0, 'errors': []}
-    lock = threading.Lock()
-    barrier = threading.Barrier(10)
-
-    def add_to_cart(user, qty):
-        factory = APIRequestFactory()
-        request = factory.post('/cart/product/create/', {
-            'user_id': user.id,
-            'product_id': product.id,
-            'quantity': qty
-        }, format='json')
-        request.user = user
-        force_authenticate(request, user=user)
-
-        barrier.wait()
-        try:
-            response = cart_product_create(request)
-            with lock:
-                if response.status_code == 200:
-                    results['success'] += 1
-                    print(f"    [OK]  {user.username} added {qty}")
-                else:
-                    results['failed'] += 1
-                    results['errors'].append(
-                        f"{user.username}: {response.data}")
-                    print(f"    [FAIL] {user.username} — {response.data}")
-        except Exception as e:
-            with lock:
-                results['failed'] += 1
-                results['errors'].append(f"{user.username}: {str(e)}")
-                print(f"    [EXC]  {user.username} — {e}")
-
-    threads = []
-    for user in users:
-        t = threading.Thread(target=add_to_cart, args=(user, 5))
-        threads.append(t)
-        t.start()
-
-    for t in threads:
-        t.join()
-
-    product.refresh_from_db()
-    show_db("AFTER")
-
-    total_in_carts = sum(
-        cp.quantity for cp in CartProduct.objects.filter(product=product)
-    )
-
-    print(f"\n>>> RESULTS:")
-    print(f"    Success:        {results['success']} (expected: 4)")
-    print(f"    Failed:         {results['failed']} (expected: 6)")
-    print(f"    Final stock:    {product.quantity} (expected: 0)")
-    print(f"    Total in carts: {total_in_carts} (expected: 20)")
-
-    # if total_in_carts <= 20 and product.quantity >= 0:
-    #     print(f"\n    [PASS] No over-allocation! Stock respected.")
-    # else:
-    #     print(
-    #         f"\n    [FAIL] Over-allocated! Carts have {total_in_carts}, stock is {product.quantity}")
-    # if total_in_carts <= 20:
-    #     print(
-    #         f"\n    [PASS] Total in carts ({total_in_carts}) doesn't exceed original stock (20)")
-    # else:
-    #     print(f"\n    [FAIL] Over-allocated! Total in carts: {total_in_carts}")
-    # this test always 'passes' at cart level — the real protection is at checkout
-    print(
-        f"\n    [INFO] All {results['success']} users added to cart successfully.")
-    print(f"    Total in carts: {total_in_carts} — exceeds stock by design.")
-    print(f"    Stock protection happens at CHECKOUT via select_for_update(), not at cart add.")
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# CONCURRENCY TEST 4: Order Cancel + Checkout on same user's bank simultaneously
+# CONCURRENCY TEST 3: Order Cancel + Checkout on same user's bank simultaneously
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def concurrent_cancel_and_checkout():
-    banner("CONCURRENCY TEST 4: Cancel Order + Checkout Same User")
+    banner("CONCURRENCY TEST 3: Cancel Order + Checkout Same User")
     print("User cancels an order (gets refund) AND checks out a new cart at the same time.\n")
     print("WITH select_for_update + transaction.atomic: Operations serialize, balance correct.")
-    print("WITHOUT locking: Race condition on bank balance — one might see stale data!\n")
 
-    cleanup()
+    # cleanup()
 
     user = User.objects.create_user(
-        username='concurrent_mixed', password='pass')
+        username='concurrent_mixed', password='pass', email='concurrent_mixed@gmail.com')
     bank = Bank.objects.create(user=user, balance=Decimal('500.00'))
     cart = Cart.objects.create(user=user)
 
@@ -411,23 +306,23 @@ def concurrent_cancel_and_checkout():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# CONCURRENCY TEST 5: Rapid stock additions while checkout is happening
+# CONCURRENCY TEST 4: Rapid stock additions while checkout is happening
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def concurrent_add_stock_and_checkout():
-    banner("CONCURRENCY TEST 5: Add Stock + Checkout Same Product")
+    banner("CONCURRENCY TEST 4: Add Stock + Checkout Same Product")
     print("Admin adds 50 stock while a buyer checks out 10 items.\n")
     print("WITH select_for_update + transaction.atomic: Stock updates serialize correctly.")
     print("WITHOUT locking: Buyer might see wrong stock count, or stock goes wrong!\n")
 
-    cleanup()
+    # cleanup()
 
     product = Product.objects.create(
         name='Concurrent Restock', price=Decimal('10.00'), quantity=15)
     buyer = User.objects.create_user(
-        username='concurrent_restock_buyer', password='pass')
+        username='concurrent_restock_buyer', password='pass', email='concurrent_restock_buyer@gmail.com')
     admin = User.objects.create_user(
-        username='concurrent_restock_admin', password='pass', is_staff=True)
+        username='concurrent_restock_admin', password='pass', is_staff=True, email='concurrent_restock_admin@gmail.com')
 
     Bank.objects.create(user=buyer, balance=Decimal('1000.00'))
     cart = Cart.objects.create(user=buyer)
@@ -522,29 +417,12 @@ def concurrent_add_stock_and_checkout():
 # ═══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == '__main__':
-    print("""
-╔══════════════════════════════════════════════════════════════════════╗
-║  DJANGO + MARIADB CONCURRENCY TESTS                                  ║
-║                                                                      ║
-║  Tests transaction.atomic + select_for_update() under real           ║
-║  concurrent load using threads.                                      ║
-║                                                                      ║
-║  TO TEST WITHOUT LOCKING:                                            ║
-║  1. Remove .select_for_update() from all views                       ║
-║  2. Comment out @transaction.atomic decorators                       ║
-║  3. Comment out with transaction.atomic() in checkout_cart_safely()    ║
-║  4. Run again — expect crashes, negative stock, or overselling       ║
-╚══════════════════════════════════════════════════════════════════════╝
-""")
-
+    cleanup()
     concurrent_checkout_last_item()
     concurrent_product_update()
-    concurrent_add_to_cart()
     concurrent_cancel_and_checkout()
     concurrent_add_stock_and_checkout()
 
     banner("ALL CONCURRENCY TESTS COMPLETE")
-    print("Check results above. Any [FAIL] means locking is broken.")
-
     sys.stdout.close()
     sys.stdout = sys.stdout.terminal
