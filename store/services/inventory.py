@@ -16,7 +16,6 @@ def checkout_cart_safely(user):
     lock = redis_client.lock(
         f"checkout:{user.id}",
         timeout=30,
-        blocking_timeout=1
     )
 
     if not lock.acquire(blocking=False):

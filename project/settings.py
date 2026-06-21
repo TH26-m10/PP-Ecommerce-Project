@@ -111,7 +111,7 @@ DATABASES = {
         'USER': os.environ.get('DB_USER', 'root'),
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
         'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
-        'PORT': os.environ.get('DB_PORT', '3306'),
+        'PORT': os.environ.get('DB_PORT', '3307'),
         'CONN_MAX_AGE': 600,  # Connection lives for 10 minutes
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",

@@ -1,9 +1,9 @@
-import os  # noqa: E402
-import sys  # noqa: E402
-import django  # noqa: E402
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.settings')  # noqa: E402
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # noqa: E402
-django.setup()  # noqa: E402
+import os  
+import sys 
+import django 
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.settings')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))) 
+django.setup() 
 
 
 class Tee:
@@ -25,14 +25,14 @@ class Tee:
 
 sys.stdout = Tee('store\\tests\\demo_results.txt')
 
-from store.views.order_view import order_cancel  # noqa: E402
-from store.views.user_view import user_create  # noqa: E402
-from store.services.inventory import checkout_cart_safely  # noqa: E402
-from store.models import Bank, Cart, CartProduct, Order, Product, ProductOrder  # noqa: E402
-from rest_framework.test import APIRequestFactory, force_authenticate  # noqa: E402
-from django.contrib.auth.models import User  # noqa: E402
-from decimal import Decimal  # noqa: E402
-import store.models  # noqa: E402
+from store.views.order_view import order_cancel 
+from store.views.user_view import user_create 
+from store.services.inventory import checkout_cart_safely 
+from store.models import Bank, Cart, CartProduct, Order, Product, ProductOrder  
+from rest_framework.test import APIRequestFactory, force_authenticate  
+from django.contrib.auth.models import User  
+from decimal import Decimal 
+import store.models
 
 
 def banner(title):
