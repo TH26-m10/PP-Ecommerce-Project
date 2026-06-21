@@ -11,13 +11,16 @@ from django.db.models import Sum
 from store.models import Product
 from django_redis import get_redis_connection
 import time
+import os
 
 PRODUCT_CACHE_PREFIX = "product"
-
-CHCHE_TIMEOUT_TO_LIVE = 30
-
-BEST_SELLERS_CACHE_KEY = "best_sellers"
 BEST_SELLERS_LOCK_KEY = "best_sellers_rebuild"
+BEST_SELLERS_CACHE_KEY = "best_sellers"
+BEST_SELLERS_STALE_KEY = "best_sellers:stale"
+
+
+CACHE_TTL = 60    
+STALE_TTL = 3600  
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -126,30 +129,10 @@ def product_add_quantity(request, product_id):
     })
 
 
-from django.core.cache import cache
-from django.db.models import Sum
-from django_redis import get_redis_connection
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-
-from store.models import Product
-from store.serializers import ProductSerializer
-
-
-BEST_SELLERS_CACHE_KEY = "best_sellers"
-BEST_SELLERS_STALE_KEY = "best_sellers:stale"
-BEST_SELLERS_LOCK_KEY = "best_sellers_lock"
-
-CACHE_TTL = 60        # fresh (1 minute)
-STALE_TTL = 3600      # stale (1 hour)
-
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def best_sellers(request):
-
+    server = os.getenv("SERVER_NAME", "unknown")
     # ================= 1. FRESH =================
     fresh = cache.get(BEST_SELLERS_CACHE_KEY)
 
@@ -157,7 +140,7 @@ def best_sellers(request):
         print("CACHE HIT → FRESH")
         return Response(fresh)
 
-    print("CACHE MISS → FRESH")
+    print(f"{server} -> CACHE MISS")
 
     # ================= 2. LOCK =================
     redis_client = get_redis_connection("default")
@@ -166,12 +149,11 @@ def best_sellers(request):
         BEST_SELLERS_LOCK_KEY,
         timeout=30
     )
-
+    
     if lock.acquire(blocking=False):
         try:
-            print("LOCK ACQUIRED → REBUILD START")
-
-            # 🔥 REBUILD (هون صار بدل Celery)
+            print(f"{server} -> LOCK ACQUIRED")
+            time.sleep(2)
             products = (
                 Product.objects
                 .annotate(total_sold=Sum('productorder__quantity'))
@@ -181,21 +163,21 @@ def best_sellers(request):
             serializer = ProductSerializer(products, many=True)
             data = serializer.data
 
-            # ✅ تحديث fresh
+           
             cache.set(
                 BEST_SELLERS_CACHE_KEY,
                 data,
                 timeout=CACHE_TTL
             )
 
-            # ✅ تحديث stale (مهم!)
+            
             cache.set(
                 BEST_SELLERS_STALE_KEY,
                 data,
                 timeout=STALE_TTL
             )
 
-            print("REBUILD DONE")
+            print(f"{server} -> REBUILD DONE")
 
             return Response(data)
 
@@ -203,11 +185,12 @@ def best_sellers(request):
             lock.release()
 
     # ================= 3. STALE =================
-    print("LOCK BUSY → RETURN STALE")
+    print(f"{server} -> LOCK BUSY")
 
     stale = cache.get(BEST_SELLERS_STALE_KEY)
-
+  
     if stale is not None:
+        print(f"{server} -> RETURN STALE")
         return Response(stale)
 
     # ================= 4. FALLBACK =================
