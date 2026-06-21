@@ -13,9 +13,6 @@ lock = threading.Lock()
 
 
 def simulate_load():
-    """
-    نحاكي تغيّر الضغط بشكل عشوائي
-    """
     for s in servers:
         servers[s]["load"] = random.randint(1, 100)
 

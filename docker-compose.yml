@@ -79,6 +79,8 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_started
+    ports:
+      - "8001:8000"
     expose:
       - "8000"
 
@@ -119,6 +121,20 @@ services:
     environment:
       BACKENDS: http://web1:8000,http://web2:8000,http://web3:8000
       LRT_WINDOW: "20"
+      LRT_HEALTH_PATH: /api/product/all
+    depends_on:
+      - web1
+      - web2
+      - web3
+
+  lb-rr:
+    build:
+      context: ./load_balancer
+      dockerfile: Dockerfile.rr
+    ports:
+      - "8081:9000"
+    environment:
+      BACKENDS: http://web1:8000,http://web2:8000,http://web3:8000
       LRT_HEALTH_PATH: /api/product/all
     depends_on:
       - web1

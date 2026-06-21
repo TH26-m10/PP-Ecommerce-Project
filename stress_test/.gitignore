@@ -1,0 +1,3 @@
+snapshots/
+reports/locust*.csv
+reports/integrity.json

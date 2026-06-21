@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تقرير المقارنة — PP E-commerce</title>
+  <style>
+    :root {
+      --bg: #f0f2f5;
+      --card: #fff;
+      --text: #1a1a2e;
+      --muted: #5c6370;
+      --border: #e2e6ea;
+      --good: #0d7a3e;
+      --good-bg: #d4edda;
+      --warn: #b45309;
+      --warn-bg: #fef3c7;
+      --accent: #1e40af;
+      --accent-light: #dbeafe;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 1.5rem;
+      line-height: 1.5;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    header {
+      background: linear-gradient(135deg, #1e3a8a, #2563eb);
+      color: #fff;
+      border-radius: 12px;
+      padding: 1.5rem 2rem;
+      margin-bottom: 1.5rem;
+    }
+    header h1 { margin: 0 0 .4rem; font-size: 1.5rem; }
+    header p { margin: 0; opacity: .9; font-size: .95rem; }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .card h2 {
+      margin: 0 0 1rem;
+      font-size: 1.1rem;
+      color: var(--accent);
+      border-bottom: 2px solid var(--accent-light);
+      padding-bottom: .5rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .92rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: .55rem .75rem;
+      text-align: center;
+    }
+    th { background: #eef2f7; font-weight: 600; }
+    tr:nth-child(even) td { background: #fafbfc; }
+    .badge {
+      display: inline-block;
+      padding: .25rem .75rem;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: .85rem;
+    }
+    .badge.good { background: var(--good-bg); color: var(--good); }
+    .badge.warn { background: var(--warn-bg); color: var(--warn); }
+    .badge.neutral { background: #e5e7eb; color: #374151; }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: .75rem;
+      margin-top: .5rem;
+    }
+    .metric {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .75rem;
+      text-align: center;
+    }
+    .metric strong {
+      display: block;
+      font-size: 1.35rem;
+      color: var(--accent);
+    }
+    .metric span { font-size: .8rem; color: var(--muted); }
+    .equation {
+      font-family: Consolas, monospace;
+      background: var(--accent-light);
+      padding: .75rem 1rem;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 1.05rem;
+      margin: .75rem 0;
+    }
+    .lb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .lb-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      background: #fafbfc;
+    }
+    .lb-card h3 { margin: 0 0 .75rem; font-size: 1rem; }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 70px 1fr 60px;
+      align-items: center;
+      gap: .5rem;
+      margin-bottom: .45rem;
+      font-size: .82rem;
+    }
+    .bar-label { color: var(--muted); text-align: right; }
+    .bar-track {
+      height: 10px;
+      background: #e5e7eb;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+      border-radius: 5px;
+    }
+    .bar-value { font-weight: 600; text-align: left; }
+    .bar-empty { color: var(--muted); grid-column: 2; }
+    .compare-table th:first-child,
+    .compare-table td:first-child { text-align: right; font-weight: 500; }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: .82rem;
+      margin-top: 1.5rem;
+    }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .card { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>تقرير مقارنة اختبارات الأداء والتزامن</h1>
+    <p>PP E-commerce Project — Non-Functional Requirements (5–10)</p>
+    <p>آخر تحديث: 2026-06-21T04:04:07.119800+00:00</p>
+  </header>
+<section class="card"><h2>جدول المقارنة الشامل</h2><div style="overflow-x:auto"><table class="compare-table"><thead><tr><th>التجربة</th><th>موزّع الحمل</th><th>نوع القفل</th><th>المستخدمون</th><th>الطلبات</th><th>نسبة الفشل %</th><th>متوسط ms</th><th>p95 ms</th><th>RPS</th><th>النتيجة</th></tr></thead><tbody><tr><td>اختبار الضغط — 100 مستخدم (الطلب 9)</td><td>lrt</td><td>select_for_update</td><td>100</td><td>825</td><td>22.18</td><td>19,204.6</td><td>40,000</td><td>4.65</td><td><span class="badge good">PASSED</span></td></tr><tr><td>تجربة Race — بدون select_for_update (الطلب 7)</td><td>—</td><td>none</td><td>5</td><td>50</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class="badge warn">RACE_DETECTED</span></td></tr><tr><td>موزّع LRT — :8080</td><td>lrt</td><td>—</td><td>50</td><td>3285</td><td>0</td><td>633.65</td><td>1,100</td><td>57.28</td><td><span class="badge good">OK</span></td></tr><tr><td>Round-Robin — :8081</td><td>round_robin</td><td>—</td><td>50</td><td>4617</td><td>0</td><td>403.62</td><td>940</td><td>79.03</td><td><span class="badge good">OK</span></td></tr><tr><td>مباشر web1 — :8001</td><td>none</td><td>—</td><td>50</td><td>4234</td><td>0</td><td>460.68</td><td>740</td><td>72.57</td><td><span class="badge good">OK</span></td></tr></tbody></table></div></section><section class="card"><h2>الطلب 9 — اختبار الاستقرار تحت الضغط</h2><div class="metric-grid"><div class="metric"><strong>100</strong><span>مستخدم متزامن</span></div><div class="metric"><strong>825</strong><span>إجمالي الطلبات</span></div><div class="metric"><strong>22.18</strong><span>نسبة الفشل %</span></div><div class="metric"><strong>4.65</strong><span>Throughput RPS</span></div><div class="metric"><strong>40,000</strong><span>p95 (ms)</span></div></div><div class="equation">739960 = 737564 + 2396</div><p style="text-align:center;color:var(--muted);margin:0">المخزون الابتدائي = النهائي + المباع أثناء الاختبار</p><div class="metric-grid" style="margin-top:1rem"><div class="metric"><strong>نعم ✓</strong><span>النظام بقي شغّالاً</span></div><div class="metric"><strong>0</strong><span>منتجات بمخزون سالب</span></div><div class="metric"><strong>نعم ✓</strong><span>سلامة المخزون</span></div><div class="metric"><strong>0</strong><span>Deadlocks</span></div></div><p style="margin-top:1rem;text-align:center">النتيجة: <span class="badge good">PASSED</span></p></section><section class="card"><h2>الطلب 7 — مع القفل vs بدون القفل</h2><table><thead><tr><th></th><th>مع select_for_update</th><th>بدون select_for_update</th></tr></thead><tbody><tr><td>Deadlocks</td><td>0</td><td>19</td></tr><tr><td>انتهاكات القيد</td><td>0</td><td>21</td></tr><tr><td>Race detected</td><td>لا ✗</td><td>نعم ✓</td></tr><tr><td>مخزون سالب</td><td>0</td><td>0</td></tr><tr><td>النتيجة</td><td><span class="badge good">PASSED</span></td><td><span class="badge warn">RACE_DETECTED</span></td></tr></tbody></table></section><section class="card"><h2>الطلب 5 — مقارنة موزّعات الحمل</h2><div class="lb-grid"><div class="lb-card"><h3>موزّع LRT — :8080 <span class="badge good">OK</span></h3><div class="bar-row"><span class="bar-label">RPS</span><div class="bar-track"><div class="bar-fill" style="width:72%"></div></div><span class="bar-value">57.28</span></div><div class="bar-row"><span class="bar-label">p95</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bar-value">1,100</span></div><div class="bar-row"><span class="bar-label">طلبات</span><div class="bar-track"><div class="bar-fill" style="width:71%"></div></div><span class="bar-value">3285</span></div><p style="margin:.75rem 0 0;font-size:.85rem;color:var(--muted)">avg: 633.65 ms · فشل: 0%</p></div><div class="lb-card"><h3>Round-Robin — :8081 <span class="badge good">OK</span></h3><div class="bar-row"><span class="bar-label">RPS</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bar-value">79.03</span></div><div class="bar-row"><span class="bar-label">p95</span><div class="bar-track"><div class="bar-fill" style="width:85%"></div></div><span class="bar-value">940</span></div><div class="bar-row"><span class="bar-label">طلبات</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bar-value">4617</span></div><p style="margin:.75rem 0 0;font-size:.85rem;color:var(--muted)">avg: 403.62 ms · فشل: 0%</p></div><div class="lb-card"><h3>مباشر web1 — :8001 <span class="badge good">OK</span></h3><div class="bar-row"><span class="bar-label">RPS</span><div class="bar-track"><div class="bar-fill" style="width:92%"></div></div><span class="bar-value">72.57</span></div><div class="bar-row"><span class="bar-label">p95</span><div class="bar-track"><div class="bar-fill" style="width:67%"></div></div><span class="bar-value">740</span></div><div class="bar-row"><span class="bar-label">طلبات</span><div class="bar-track"><div class="bar-fill" style="width:92%"></div></div><span class="bar-value">4234</span></div><p style="margin:.75rem 0 0;font-size:.85rem;color:var(--muted)">avg: 460.68 ms · فشل: 0%</p></div></div></section><footer>Generated from stress_test/reports/comparison.json · python stress_test/render_html.py</footer></div></body></html>

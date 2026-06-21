@@ -20,11 +20,12 @@ echo.
 echo ========================================
 echo  Least Response Time stack is running
 echo ========================================
-echo  App (via LB):  http://localhost:8080
-echo  LRT status:    http://localhost:8080/lb/status
-echo  API example:   http://localhost:8080/api/product/all
+echo  App (LRT):       http://localhost:8080
+echo  LRT status:      http://localhost:8080/lb/status
+echo  Round-Robin LB:  http://localhost:8081
+echo  Direct web1:     http://localhost:8001
+echo  API example:     http://localhost:8080/api/product/all
 echo  MySQL port:    localhost:3307
 echo ========================================
 echo.
-echo Check response headers: X-LB-Backend, X-LB-Response-Ms
-echo.
+echo  Run tests:     python stress_test/run.py all

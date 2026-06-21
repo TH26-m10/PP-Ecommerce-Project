@@ -91,9 +91,6 @@ def cart_confirm_payment(request, user_id):
         user = User.objects.get(id=user_id)
 
         order, error, items = checkout_cart_safely(user)
-        
-        # ===== CACHE INVALIDATION =====
-        order, error, items = checkout_cart_safely(user)
 
         if error:
             return Response({

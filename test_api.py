@@ -1,4 +1,3 @@
-"""Full API integration test for the e-commerce project."""
 import json
 import sys
 import requests
